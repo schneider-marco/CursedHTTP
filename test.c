@@ -26,14 +26,15 @@ void start(struct WebServer server) {
         if (n > 0) {
             size_t len = 0;
             char *body = read_html_to_body("index.html", &len);
-            char header[256];
-            int hlen = snprintf(header, sizeof(header),
+            //char header[256];
+            //snprintf(header, sizeof(header),
+            const char *header =
                 "HTTP/1.1 200 OK\r\n"
                 "Content-Type: text/html; charset=utf-8\r\n"
                 "Cache-Control: no-store\r\n"
                 "Content-Length: %zu\r\n"
                 "Connection: close\r\n"
-                "\r\n", len);
+                "\r\n";
 
             buffer[n] = '\0';
             printf("Incoming Request: %s\n", buffer);
