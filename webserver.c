@@ -8,7 +8,7 @@
 #include <string.h>
 
 static char file_buffer[8192];
-static char read_buffer[8192];
+static int read_buffer_size = 8192;
 
 static const char *default_header =
                 "HTTP/1.1 200 OK\r\n"
@@ -109,6 +109,52 @@ static const char *default_body =
 "</body>\n"
 "</html>\n";
 
+static int is_allow_http_method(const char *s) {
+    if (strncmp(s, "GET", 3) == 0) return 1;
+    //if (strcmp(s, " DELETE") == 0) return 1;
+    //if (strcmp(s, " PUT") == 0) return 1;
+
+    return 0;
+}
+
+static int is_allow_http_version(const char *s) {
+    if (strncmp(s, "HTTP/1.0", 8) == 0) return 1;
+    if (strncmp(s, "HTTP/1.1", 8) == 0) return 1;
+
+    return 0;
+}
+
+static int is_allow_http_path(const char *s) {
+    // implement later
+    return 1;
+}
+
+
+static int is_http_request(const char *buf, size_t n) {
+    if (buf == NULL || n == 0) return 0;
+
+    char line[1024];
+    size_t i = 0;
+    while (i < n && buf[i] != '\r' && buf[i] != '\n' && i < sizeof(line) - 1) {
+        line[i] = buf[i];
+        i++;
+    }
+    line[i] = '\0';
+
+    char method[16] = {0};
+    char path[512] = {0};
+    char version[16] = {0};
+
+    if (sscanf(line, "%15s %511s %15s", method, path, version) != 3) {
+        return 0;
+    }
+
+    if (!is_allow_http_method(method))   return 0;
+    if (!is_allow_http_version(version)) return 0;
+    if (!is_allow_http_path(path))       return 0;
+
+    return 1;
+}
 
 void start(struct WebServer *self) {
     char *ip = inet_ntoa(self->address.sin_addr);
@@ -116,7 +162,7 @@ void start(struct WebServer *self) {
 
     while (1) {
         struct sockaddr_in client_addr;
-
+        char read_buffer[read_buffer_size];
         socklen_t address_len = sizeof(client_addr);
 
         int sock = accept(self->socket, (struct sockaddr *)&client_addr, &address_len);
@@ -129,6 +175,15 @@ void start(struct WebServer *self) {
         if (n > 0) {
             size_t len = 0;
             read_buffer[n] = '\0';
+
+            if (is_http_request(read_buffer, (size_t)n) == 0) {
+                printf("[WARN] Non http req or unsupported version recieved... closing connection\n");
+                // send bad request
+                const char *bad = "HTTP/1.1 400 Bad Request\r\nConnection: close\r\n\r\n";
+                write(sock, bad, strlen(bad));
+                close(sock);
+                continue;
+            }
 
             char *newline = strstr(read_buffer, "\r\n");
             if (newline) *newline = '\0';
