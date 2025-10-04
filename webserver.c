@@ -156,6 +156,27 @@ static int is_http_request(const char *buf, size_t n) {
     return 1;
 }
 
+char *read_html_to_body(const char *path, size_t *out_len) {
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) {
+        perror("failed to open file\n");
+        exit(1);
+    }
+
+    ssize_t n = read(fd, file_buffer, sizeof(file_buffer) - 1);
+    if (n < 0) {
+        perror("file read failed \n");
+        close(fd);
+        exit(1);
+    }
+
+    file_buffer[n] = '\0';
+    close(fd);
+
+    if (out_len) *out_len = (size_t)n;
+    return file_buffer;
+}
+
 void start(struct WebServer *self) {
     char *ip = inet_ntoa(self->address.sin_addr);
     printf("Starting server on http://%s:%d\n", ip, ntohs(self->address.sin_port));
@@ -194,27 +215,6 @@ void start(struct WebServer *self) {
         }
         close(sock);
     }
-}
-
-char *read_html_to_body(const char *path, size_t *out_len) {
-    int fd = open(path, O_RDONLY);
-    if (fd < 0) {
-        perror("failed to open file\n");
-        exit(1);
-    }
-
-    ssize_t n = read(fd, file_buffer, sizeof(file_buffer) - 1);
-    if (n < 0) {
-        perror("file read failed \n");
-        close(fd);
-        exit(1);
-    }
-
-    file_buffer[n] = '\0';
-    close(fd);
-
-    if (out_len) *out_len = (size_t)n;
-    return file_buffer;
 }
 
 struct WebServer NewWebServer(char *interface, int port) {
