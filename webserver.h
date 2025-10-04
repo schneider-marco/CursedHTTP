@@ -13,9 +13,9 @@ struct WebServer {
 
     int socket;
 
-    void (*start)(struct WebServer);
+    void (*start)(struct WebServer *self);
 };
 
-struct WebServer NewWebServer(int domain, int service, int protocol, char *interface, int port, int backlog, void (*start)(struct WebServer));
+struct WebServer NewWebServer(int domain, int service, int protocol, char *interface, int port, int backlog);
 
 char *read_html_to_body(const char *path, size_t *out_len);
